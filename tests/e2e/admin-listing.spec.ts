@@ -21,7 +21,7 @@ test('admin listing shows both fixture sessions with file counts', async ({ page
   // Row for the open session
   const openRow = rows.filter({ hasText: FIXTURE_NO_PWD.name });
   await expect(openRow).toHaveCount(1);
-  await expect(openRow.locator('td').nth(2)).toHaveText('6'); // Ilość plików
+  await expect(openRow.locator('td').nth(6)).toHaveText('6'); // Ilość plików
 
   // Row for the protected session – password is rendered in plain text (today's behavior)
   const protectedRow = rows.filter({ hasText: FIXTURE_WITH_PWD.name });
@@ -70,12 +70,13 @@ test('admin listing reflects chosen image counts after a client selection', asyn
   await loginAdmin(page);
 
   const openRow = page.locator('table tbody tr').filter({ hasText: FIXTURE_NO_PWD.name });
-  // nth(6) = chosen_images_count (nth(7) is the delete button)
-  await expect(openRow.locator('td').nth(6)).toHaveText('2');
+  // nth(7) = chosen_images_count (nth(8) is the delete button)
+  await expect(openRow.locator('td').nth(7)).toHaveText('2');
 });
 
 test('ID badge shows full UUID in tooltip on hover', async ({ page }) => {
   await loginAdmin(page);
+  await page.locator('#dt-date-range').waitFor(); // Bootstrap tooltips wired up by same end-of-body script
   const row = page.locator('table tbody tr').filter({ hasText: FIXTURE_NO_PWD.name });
   await row.locator('[data-bs-toggle="tooltip"]').first().hover();
   await expect(page.locator('.tooltip-inner')).toBeVisible();
@@ -84,6 +85,7 @@ test('ID badge shows full UUID in tooltip on hover', async ({ page }) => {
 
 test('URL "open" link shows full URL in tooltip on hover', async ({ page }) => {
   await loginAdmin(page);
+  await page.locator('#dt-date-range').waitFor();
   const row = page.locator('table tbody tr').filter({ hasText: FIXTURE_NO_PWD.name });
   await row.locator('a', { hasText: 'open' }).hover();
   await expect(page.locator('.tooltip-inner')).toBeVisible();
@@ -93,8 +95,11 @@ test('URL "open" link shows full URL in tooltip on hover', async ({ page }) => {
 test('ID copy button copies UUID to clipboard', async ({ page }) => {
   await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
   await loginAdmin(page);
+  await page.locator('#dt-date-range').waitFor(); // DataTables initComplete done, DOM settled
   const row = page.locator('table tbody tr').filter({ hasText: FIXTURE_NO_PWD.name });
-  await row.locator('.copy-btn').first().click();
+  const btn = row.locator('.copy-btn').first();
+  await btn.click();
+  await expect(btn).toHaveClass(/text-success/); // write completes before class is added
   const text = await page.evaluate(() => navigator.clipboard.readText());
   expect(text).toBe(FIXTURE_NO_PWD.id);
 });
@@ -102,8 +107,11 @@ test('ID copy button copies UUID to clipboard', async ({ page }) => {
 test('URL copy button copies URL to clipboard', async ({ page }) => {
   await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
   await loginAdmin(page);
+  await page.locator('#dt-date-range').waitFor(); // DataTables initComplete done, DOM settled
   const row = page.locator('table tbody tr').filter({ hasText: FIXTURE_NO_PWD.name });
-  await row.locator('.copy-btn').nth(1).click();
+  const btn = row.locator('.copy-btn').nth(1);
+  await btn.click();
+  await expect(btn).toHaveClass(/text-success/); // write completes before class is added
   const text = await page.evaluate(() => navigator.clipboard.readText());
   expect(text).toContain('test-no-pwd');
 });
@@ -113,7 +121,7 @@ test('session creation date is shown in yyyy-mm-dd hh:mm format', async ({ page 
 
   // Fixture session has a known created_at of '2024-01-01 10:00:00' → shows as '2024-01-01 10:00'
   const row = page.locator('table tbody tr').filter({ hasText: FIXTURE_NO_PWD.name });
-  await expect(row.locator('td').nth(7)).toHaveText('2024-01-01 10:00');
+  await expect(row.locator('td').nth(0)).toHaveText('2024-01-01 10:00');
 });
 
 test('rows with chosen photos get a green mark and highlight; rows without do not', async ({ page }) => {

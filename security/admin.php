@@ -6,6 +6,16 @@ require_once __DIR__.'/../view.php';
 $session_count = (int) q("SELECT COUNT(*) AS n FROM session")->fetch_assoc()['n'];
 
 $page_title = 'Panel administratora';
+$page_css = [
+    'https://cdn.jsdelivr.net/npm/datatables.net-bs5@2.2.2/css/dataTables.bootstrap5.min.css',
+    'https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css',
+];
+$extra_scripts = [
+    'https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js',
+    'https://cdn.jsdelivr.net/npm/datatables.net@2.2.2/js/dataTables.min.js',
+    'https://cdn.jsdelivr.net/npm/datatables.net-bs5@2.2.2/js/dataTables.bootstrap5.min.js',
+    'https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.js',
+];
 require __DIR__.'/../_layout_head.php';
 ?>
 <style>
@@ -19,6 +29,21 @@ require __DIR__.'/../_layout_head.php';
     .copy-btn { transition: color 0.15s; }
     .copy-btn:hover { color: #9ec5fe !important; }
     .copy-btn:active { color: #0d6efd !important; }
+    #sessions-table thead th { vertical-align: middle; text-align: center; }
+    #sessions-table th:nth-child(1),
+    #sessions-table td:nth-child(1) { min-width: 180px; }
+    #dt-date-range { font-size: 0.65rem; }
+    #sessions-table td:nth-child(1),
+    #sessions-table td:nth-child(4),
+    #sessions-table td:nth-child(5),
+    #sessions-table td:nth-child(7),
+    #sessions-table td:nth-child(8) { text-align: center; }
+    #sessions-table th:nth-child(4),
+    #sessions-table td:nth-child(4),
+    #sessions-table th:nth-child(5),
+    #sessions-table td:nth-child(5),
+    #sessions-table th:nth-child(6),
+    #sessions-table td:nth-child(6) { min-width: 140px; }
 </style>
 <div class="container-xxl bd-gutter mt-3 my-md-4 bd-layout">
     <nav class="navbar bg-light">
@@ -69,7 +94,13 @@ require __DIR__.'/../_layout_head.php';
                             <div class="form-text">Zostaw puste jeśli sesja nie ma być chroniona hasłem.</div>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label" for="session_description">Opis sesji</label>
+                            <div class="d-flex align-items-center gap-2 mb-1">
+                                <label class="form-label mb-0" for="session_description">Opis sesji</label>
+                                <div class="form-check mb-0">
+                                    <input class="form-check-input" id="remember_description" type="checkbox">
+                                    <label class="form-check-label small text-muted" for="remember_description">zapamiętaj</label>
+                                </div>
+                            </div>
                             <textarea class="form-control" id="session_description" name="session_description" rows="3"></textarea>
                         </div>
                         <div class="mb-3">
@@ -94,17 +125,17 @@ require __DIR__.'/../_layout_head.php';
             </h2>
             <div aria-labelledby="panelsStayOpen-headingOne" class="accordion-collapse collapse show" id="panelsStayOpen-collapseOne">
                 <div class="accordion-body">
-                    <table class="table">
+                    <table class="table" id="sessions-table">
                         <thead>
                             <tr>
+                                <th scope="col">Data</th>
                                 <th scope="col">Nazwa</th>
                                 <th scope="col">Opis</th>
-                                <th scope="col">Ilość plików</th>
                                 <th scope="col">ID</th>
                                 <th scope="col">URL</th>
                                 <th scope="col">Hasło</th>
+                                <th scope="col">Ilość plików</th>
                                 <th scope="col">Wybrano</th>
-                                <th scope="col">Data</th>
                                 <th scope="col"></th>
                             </tr>
                         </thead>
@@ -123,6 +154,7 @@ require __DIR__.'/../_layout_head.php';
                                 $has_choices = (int) $row["chosen_images_count"] > 0;
                             ?>
                                 <tr<?= $has_choices ? ' style="--bs-table-bg: rgba(25,135,84,0.1);"' : '' ?>>
+                                    <td class="text-nowrap text-muted small"><?= h(substr($row['created_at'] ?? '', 0, 16)) ?></td>
                                     <td>
                                         <?php if ($has_choices): ?>
                                         <svg class="bi bi-check-circle-fill text-success me-1" fill="currentColor" height="14" viewBox="0 0 16 16" width="14" xmlns="http://www.w3.org/2000/svg"><path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zm-3.97-3.03a.75.75 0 0 0-1.08.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-.01-1.05z"/></svg>
@@ -130,8 +162,8 @@ require __DIR__.'/../_layout_head.php';
                                         <?= h($row["name"]) ?>
                                     </td>
                                     <td><?= h($row["description"]) ?></td>
-                                    <td><?= 1 + substr_count($row["file_names"] ?? '', "\n") ?></td>
                                     <td>
+                                        <span class="visually-hidden"><?= h($row['id']) ?></span>
                                         <span class="d-inline-flex align-items-center gap-1">
                                             <span class="badge text-bg-secondary fw-normal font-monospace"
                                                   data-bs-toggle="tooltip" data-bs-placement="top"
@@ -145,6 +177,7 @@ require __DIR__.'/../_layout_head.php';
                                         </span>
                                     </td>
                                     <td>
+                                        <span class="visually-hidden"><?= $url ?></span>
                                         <span class="d-inline-flex align-items-center gap-1">
                                             <a class="small" href="<?= $url ?>" rel="noopener"
                                                target="_blank"
@@ -158,8 +191,8 @@ require __DIR__.'/../_layout_head.php';
                                         </span>
                                     </td>
                                     <td><?= h($row["password"]) ?></td>
+                                    <td><?= 1 + substr_count($row["file_names"] ?? '', "\n") ?></td>
                                     <td><?= (int) $row["chosen_images_count"] ?></td>
-                                    <td class="text-nowrap text-muted small"><?= h(substr($row['created_at'] ?? '', 0, 16)) ?></td>
                                     <td>
                                         <button class="btn btn-sm btn-outline-danger delete-session-btn"
                                                 data-session-id="<?= h($row['id']) ?>"
@@ -239,6 +272,132 @@ document.querySelectorAll('.delete-session-btn').forEach(btn => {
         document.getElementById('deleteSessionId').value = btn.dataset.sessionId;
         new bootstrap.Modal(document.getElementById('deleteModal')).show();
     });
+});
+
+(function() {
+    const LS_REMEMBER = 'admin_remember_desc';
+    const LS_VALUE    = 'admin_desc_value';
+    const chk  = document.getElementById('remember_description');
+    const area = document.getElementById('session_description');
+
+    // Restore state on load
+    if (localStorage.getItem(LS_REMEMBER) === '1') {
+        chk.checked = true;
+        area.value = localStorage.getItem(LS_VALUE) || '';
+    }
+
+    // Keep stored value in sync while typing (only when remembered)
+    area.addEventListener('input', () => {
+        if (chk.checked) localStorage.setItem(LS_VALUE, area.value);
+    });
+
+    // Toggle persistence
+    chk.addEventListener('change', () => {
+        if (chk.checked) {
+            localStorage.setItem(LS_REMEMBER, '1');
+            localStorage.setItem(LS_VALUE, area.value);
+        } else {
+            localStorage.removeItem(LS_REMEMBER);
+            localStorage.removeItem(LS_VALUE);
+        }
+    });
+
+    // On submit: if remembered, update stored value; if not, nothing to do
+    area.closest('form').addEventListener('submit', () => {
+        if (chk.checked) localStorage.setItem(LS_VALUE, area.value);
+    });
+})();
+
+let dtFp = null;
+
+const fmtYMD = d => d.getFullYear() + '-'
+    + String(d.getMonth() + 1).padStart(2, '0') + '-'
+    + String(d.getDate()).padStart(2, '0');
+
+DataTable.ext.search.push(function(settings, data) {
+    if (settings.nTable.id !== 'sessions-table') return true;
+    if (!dtFp?.selectedDates.length) return true;
+    const min = fmtYMD(dtFp.selectedDates[0]);
+    const max = dtFp.selectedDates[1] ? fmtYMD(dtFp.selectedDates[1]) : '';
+    const d = (data[0] || '').substring(0, 10);
+    if (min && d < min) return false;
+    if (max && d > max) return false;
+    return true;
+});
+
+const dt = new DataTable('#sessions-table', {
+    paging: false,
+    layout: { topStart: null, topEnd: null, bottomStart: null, bottomEnd: null },
+    order: [[0, 'desc']],
+    columnDefs: [{ targets: 8, orderable: false, searchable: false }],
+    initComplete: function() {
+        const api = this.api();
+        const saved = JSON.parse(sessionStorage.getItem('admin_dt_filters') || 'null');
+        sessionStorage.removeItem('admin_dt_filters');
+        api.columns().every(function(i) {
+            if (i >= 6) return; // no filter for Ilość plików, Wybrano, delete
+            const col = this;
+            const th = col.header();
+            if (i === 0) {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'mt-1';
+                wrapper.style.position = 'relative';
+
+                const inp = document.createElement('input');
+                inp.type = 'text';
+                inp.id = 'dt-date-range';
+                inp.className = 'form-control form-control-sm';
+                inp.placeholder = 'Od – do…';
+                inp.style.paddingRight = '1.4rem';
+                inp.addEventListener('click', e => e.stopPropagation());
+
+                const clearBtn = document.createElement('button');
+                clearBtn.type = 'button';
+                clearBtn.textContent = '×';
+                clearBtn.style.cssText = 'position:absolute;right:4px;top:50%;transform:translateY(-50%);border:none;background:none;padding:0;line-height:1;color:#6c757d;font-size:0.9rem;cursor:pointer;';
+                clearBtn.addEventListener('click', e => {
+                    e.stopPropagation();
+                    dtFp.clear();
+                    api.draw();
+                });
+
+                wrapper.appendChild(inp);
+                wrapper.appendChild(clearBtn);
+                th.appendChild(wrapper);
+
+                dtFp = flatpickr(inp, {
+                    mode: 'range',
+                    dateFormat: 'y/m/d',
+                    locale: { rangeSeparator: ' - ' },
+                    onChange: () => api.draw(),
+                });
+                if (saved?.dates?.length) {
+                    dtFp.setDate(saved.dates.map(s => new Date(s)), false);
+                }
+            } else {
+                const inp = document.createElement('input');
+                inp.type = 'search';
+                inp.className = 'form-control form-control-sm mt-1';
+                inp.placeholder = 'Szukaj…';
+                const savedVal = saved?.cols?.[i - 1] || '';
+                if (savedVal) { inp.value = savedVal; col.search(savedVal); }
+                inp.addEventListener('input', function() {
+                    if (col.search() !== this.value) col.search(this.value).draw();
+                });
+                inp.addEventListener('click', e => e.stopPropagation());
+                th.appendChild(inp);
+            }
+        });
+        if (saved) api.draw();
+    }
+});
+
+document.querySelector('#deleteModal form').addEventListener('submit', () => {
+    const filters = {
+        dates: dtFp?.selectedDates.map(d => d.toISOString()) ?? [],
+        cols: [1,2,3,4,5].map(i => dt.column(i).search() || ''),
+    };
+    sessionStorage.setItem('admin_dt_filters', JSON.stringify(filters));
 });
 JS;
 require __DIR__.'/../_layout_foot.php';

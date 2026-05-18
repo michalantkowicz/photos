@@ -98,3 +98,95 @@ test('unauthenticated POST to delete_session.php returns 403', async ({ page }) 
   });
   expect(response.status()).toBe(403);
 });
+
+// ── Filter persistence across delete ─────────────────────────────────────────
+
+/** Wait for DataTables to finish its initComplete (sentinel input is rendered). */
+async function waitForDT(page: Parameters<typeof loginAdmin>[0]) {
+  await page.locator('#dt-date-range').waitFor();
+}
+
+/** Column-1 (Nazwa) filter input injected by DataTables initComplete. */
+function nameFilterInput(page: Parameters<typeof loginAdmin>[0]) {
+  return page.locator('#sessions-table thead th').nth(1).locator('input');
+}
+
+test('column search filter is restored after session delete', async ({ page }) => {
+  await loginAdmin(page);
+  await adminCreateSession(page, { name: 'Filter Persist Delete', slug: 'filter-persist-delete' });
+  await page.goto('/admin');
+  await waitForDT(page);
+
+  await nameFilterInput(page).fill('Filter Persist Delete');
+
+  const row = page.locator('table tbody tr').filter({ hasText: 'Filter Persist Delete' });
+  await row.locator('.delete-session-btn').click();
+  await expect(page.locator('#deleteModal')).toBeVisible();
+  await page.locator('#deleteModal button[type="submit"]').click();
+  await page.waitForURL(/\/admin/);
+  await waitForDT(page);
+
+  await expect(nameFilterInput(page)).toHaveValue('Filter Persist Delete');
+});
+
+test('date range filter is restored after session delete', async ({ page }) => {
+  await loginAdmin(page);
+  await adminCreateSession(page, { name: 'Date Range Persist Delete', slug: 'date-range-persist-delete' });
+  await page.goto('/admin');
+  await waitForDT(page);
+
+  // Wide range covering both fixture sessions (2024) and the newly created one (today).
+  await page.evaluate(() => {
+    // Pass Date objects, not strings — Flatpickr's dateFormat 'y/m/d' can't parse ISO strings.
+    (document.getElementById('dt-date-range') as any)._flatpickr.setDate([new Date(2024, 0, 1), new Date(2026, 11, 31)]);
+  });
+
+  const row = page.locator('table tbody tr').filter({ hasText: 'Date Range Persist Delete' });
+  await row.locator('.delete-session-btn').click();
+  await expect(page.locator('#deleteModal')).toBeVisible();
+  await page.locator('#deleteModal button[type="submit"]').click();
+  await page.waitForURL(/\/admin/);
+  await waitForDT(page);
+
+  await expect(page.locator('#dt-date-range')).toHaveValue('24/01/01 - 26/12/31');
+});
+
+test('both text and date filters are restored together after session delete', async ({ page }) => {
+  await loginAdmin(page);
+  await adminCreateSession(page, { name: 'Multi Filter Persist', slug: 'multi-filter-persist' });
+  await page.goto('/admin');
+  await waitForDT(page);
+
+  await nameFilterInput(page).fill('Multi Filter Persist');
+  await page.evaluate(() => {
+    // Pass Date objects, not strings — Flatpickr's dateFormat 'y/m/d' can't parse ISO strings.
+    (document.getElementById('dt-date-range') as any)._flatpickr.setDate([new Date(2024, 0, 1), new Date(2026, 11, 31)]);
+  });
+
+  const row = page.locator('table tbody tr').filter({ hasText: 'Multi Filter Persist' });
+  await row.locator('.delete-session-btn').click();
+  await expect(page.locator('#deleteModal')).toBeVisible();
+  await page.locator('#deleteModal button[type="submit"]').click();
+  await page.waitForURL(/\/admin/);
+  await waitForDT(page);
+
+  await expect(nameFilterInput(page)).toHaveValue('Multi Filter Persist');
+  await expect(page.locator('#dt-date-range')).toHaveValue('24/01/01 - 26/12/31');
+});
+
+test('filters are not restored on a plain page reload', async ({ page }) => {
+  await loginAdmin(page);
+  await waitForDT(page);
+
+  await nameFilterInput(page).fill('something');
+  await page.evaluate(() => {
+    (document.getElementById('dt-date-range') as any)._flatpickr.setDate([new Date(2024, 0, 1), new Date(2024, 5, 30)]);
+  });
+
+  // Navigate away and back without going through the delete form.
+  await page.goto('/admin');
+  await waitForDT(page);
+
+  await expect(nameFilterInput(page)).toHaveValue('');
+  await expect(page.locator('#dt-date-range')).toHaveValue('');
+});
