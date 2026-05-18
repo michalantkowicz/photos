@@ -108,6 +108,14 @@ test('URL copy button copies URL to clipboard', async ({ page }) => {
   expect(text).toContain('test-no-pwd');
 });
 
+test('session creation date is shown in yyyy-mm-dd hh:mm format', async ({ page }) => {
+  await loginAdmin(page);
+
+  // Fixture session has a known created_at of '2024-01-01 10:00:00' → shows as '2024-01-01 10:00'
+  const row = page.locator('table tbody tr').filter({ hasText: FIXTURE_NO_PWD.name });
+  await expect(row.locator('td').nth(7)).toHaveText('2024-01-01 10:00');
+});
+
 test('rows with chosen photos get a green mark and highlight; rows without do not', async ({ page }) => {
   const conn = await db();
   await conn.query(

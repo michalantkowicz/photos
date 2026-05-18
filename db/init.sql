@@ -14,6 +14,7 @@ CREATE TABLE session (
     description TEXT,
     file_names  TEXT,
     password    VARCHAR(255) DEFAULT NULL,
+    created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE KEY uniq_url (url)
 );
 
@@ -47,16 +48,18 @@ CREATE TABLE login_attempts (
 -- Fixtures used by the Playwright suite. The corresponding photo directories
 -- are created on disk by tests/globalSetup.ts.
 
-INSERT INTO session (id, name, url, description, file_names, password) VALUES
+INSERT INTO session (id, name, url, description, file_names, password, created_at) VALUES
 ('00000000-0000-4000-8000-000000000001',
  'Test Session No Password',
  'http://localhost:8080/sesja/test-no-pwd',
  'Open gallery used by E2E tests',
  'photo1.jpg\nphoto2.jpg\nphoto3.jpg\nphoto4.jpg\nphoto5.jpg\nphoto6.jpg',
- NULL),
+ NULL,
+ '2024-01-01 10:00:00'),
 ('00000000-0000-4000-8000-000000000002',
  'Test Session With Password',
  'http://localhost:8080/sesja/test-with-pwd',
  'Password-protected gallery used by E2E tests',
  'photo1.jpg\nphoto2.jpg\nphoto3.jpg\nphoto4.jpg\nphoto5.jpg\nphoto6.jpg',
- 'test123');
+ 'test123',
+ '2024-01-02 10:00:00');

@@ -103,7 +103,8 @@ require __DIR__.'/../_layout_head.php';
                                 <th scope="col">ID</th>
                                 <th scope="col">URL</th>
                                 <th scope="col">Hasło</th>
-                                <th scope="col">Liczba wybranych zdjęć</th>
+                                <th scope="col">Wybrano</th>
+                                <th scope="col">Data</th>
                                 <th scope="col"></th>
                             </tr>
                         </thead>
@@ -111,11 +112,11 @@ require __DIR__.'/../_layout_head.php';
                             <?php
                             // Qualify session.id explicitly: adding any column to `choice` (e.g. a PK)
                             // would otherwise rebind the subquery and silently zero the count.
-                            $result = q("SELECT id, name, url, description, file_names, password,
+                            $result = q("SELECT id, name, url, description, file_names, password, created_at,
                                            (SELECT count(*) FROM choice WHERE session_id = session.id) AS chosen_images_count
                                          FROM session");
                             if ($result->num_rows === 0) {
-                                echo '<tr><td colspan="8">0 results</td></tr>';
+                                echo '<tr><td colspan="9">0 results</td></tr>';
                             }
                             while ($row = $result->fetch_assoc()):
                                 $url = h($row["url"]);
@@ -158,6 +159,7 @@ require __DIR__.'/../_layout_head.php';
                                     </td>
                                     <td><?= h($row["password"]) ?></td>
                                     <td><?= (int) $row["chosen_images_count"] ?></td>
+                                    <td class="text-nowrap text-muted small"><?= h(substr($row['created_at'] ?? '', 0, 16)) ?></td>
                                     <td>
                                         <button class="btn btn-sm btn-outline-danger delete-session-btn"
                                                 data-session-id="<?= h($row['id']) ?>"
