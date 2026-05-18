@@ -87,7 +87,11 @@ export async function adminCreateSession(
   page: Page,
   opts: { name: string; slug: string; password?: string },
 ): Promise<CreatedSession> {
-  await page.locator('button[data-bs-target="#panelsStayOpen-collapseTwo"]').click();
+  const formPanel = page.locator('#panelsStayOpen-collapseTwo');
+  if (!await formPanel.isVisible()) {
+    await page.locator('button[data-bs-target="#panelsStayOpen-collapseTwo"]').click();
+    await formPanel.waitFor({ state: 'visible' });
+  }
 
   await page.fill('input[name="session_name"]', opts.name);
 

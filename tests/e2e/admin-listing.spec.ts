@@ -45,6 +45,18 @@ test('admin listing displays a newly created session password in plain text', as
   await expect(row.locator('td').nth(5)).toContainText(pwd);
 });
 
+test('session count badge shows number of sessions and updates after creating one', async ({ page }) => {
+  await loginAdmin(page);
+
+  const badge = page.locator('#session-count-badge');
+  await expect(badge).toHaveText('2');
+
+  await adminCreateSession(page, { name: 'Badge Count Test', slug: 'badge-count-test' });
+  await page.goto('/admin');
+
+  await expect(badge).toHaveText('3');
+});
+
 test('admin listing reflects chosen image counts after a client selection', async ({ page, context }) => {
   // Seed a couple of choices for the open session
   const conn = await db();
