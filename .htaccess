@@ -1,0 +1,8 @@
+SecRuleRemoveById 950115
+AddHandler application/x-httpd-php81 php
+RewriteEngine On
+RewriteRule ^sesja/([^/]*)$ /?sesja=$1 [L]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^([^\.]+)$ $1.php [NC,L]
+
+php_value max_file_uploads 750

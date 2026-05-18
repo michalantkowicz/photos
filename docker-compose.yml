@@ -1,0 +1,46 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    ports:
+      - "8080:80"
+    volumes:
+      - .:/var/www/html
+      # Override the production .htaccess (which contains shared-hosting
+      # directives like AddHandler) with a docker-friendly version.
+      - ./docker/htaccess:/var/www/html/.htaccess
+    environment:
+      DB_HOST: db
+      DB_USER: ewelina
+      DB_PASS: ewelina
+      DB_NAME: sessions
+      BASE_URL: http://localhost:8080
+      # bcrypt hash of "admin"
+      ADMIN_PASSWORD: "$$2y$$10$$zzlpXHjs7pFiob16EwRdwuorsyLusKcqT8pxUjYxDnr1OfIlsC5PS"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: mysql:8.0
+    command: --default-authentication-plugin=mysql_native_password
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: sessions
+      MYSQL_USER: ewelina
+      MYSQL_PASSWORD: ewelina
+    ports:
+      # Mapped to 3307 to avoid clashing with a host MySQL on 3306
+      - "3307:3306"
+    volumes:
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - dbdata:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  dbdata:

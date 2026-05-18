@@ -1,0 +1,17 @@
+# Internal agent/AI onboarding — not for public sharing
+AGENT.md
+
+# Client photos — private data, never commit
+/data/*/
+
+# Re-include the security rule that protects the data directory
+!/data/.htaccess
+
+# Test artifacts
+/test-results/
+/tests/test-results/
+/tests/node_modules/
+/tests/fixtures/
+
+# Local editor state
+/.claude/

@@ -1,0 +1,6 @@
+RewriteEngine On
+RewriteRule ^sesja/([^/]*)$ /?sesja=$1 [L]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^([^\.]+)$ $1.php [NC,L]
+
+php_value max_file_uploads 750
