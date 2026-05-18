@@ -16,6 +16,9 @@ require __DIR__.'/../_layout_head.php';
     #panelsStayOpen-headingOne .accordion-button::after {
         filter: invert(24%) sepia(18%) saturate(846%) hue-rotate(95deg) brightness(96%) contrast(93%);
     }
+    .copy-btn { transition: color 0.15s; }
+    .copy-btn:hover { color: #9ec5fe !important; }
+    .copy-btn:active { color: #0d6efd !important; }
 </style>
 <div class="container-xxl bd-gutter mt-3 my-md-4 bd-layout">
     <nav class="navbar bg-light">
@@ -115,13 +118,43 @@ require __DIR__.'/../_layout_head.php';
                             }
                             while ($row = $result->fetch_assoc()):
                                 $url = h($row["url"]);
+                                $has_choices = (int) $row["chosen_images_count"] > 0;
                             ?>
-                                <tr>
-                                    <td><?= h($row["name"]) ?></td>
+                                <tr<?= $has_choices ? ' style="--bs-table-bg: rgba(25,135,84,0.1);"' : '' ?>>
+                                    <td>
+                                        <?php if ($has_choices): ?>
+                                        <svg class="bi bi-check-circle-fill text-success me-1" fill="currentColor" height="14" viewBox="0 0 16 16" width="14" xmlns="http://www.w3.org/2000/svg"><path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zm-3.97-3.03a.75.75 0 0 0-1.08.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-.01-1.05z"/></svg>
+                                        <?php endif; ?>
+                                        <?= h($row["name"]) ?>
+                                    </td>
                                     <td><?= h($row["description"]) ?></td>
                                     <td><?= 1 + substr_count($row["file_names"] ?? '', "\n") ?></td>
-                                    <td><?= h($row["id"]) ?></td>
-                                    <td><a href="<?= $url ?>" target="_blank"><?= $url ?></a></td>
+                                    <td>
+                                        <span class="d-inline-flex align-items-center gap-1">
+                                            <span class="badge text-bg-secondary fw-normal font-monospace"
+                                                  data-bs-toggle="tooltip" data-bs-placement="top"
+                                                  data-bs-title="<?= h($row['id']) ?>"
+                                                  style="cursor:default;">id</span>
+                                            <button class="btn btn-sm p-0 border-0 text-muted copy-btn lh-1"
+                                                    data-copy="<?= h($row['id']) ?>" type="button"
+                                                    aria-label="Kopiuj ID">
+                                                <svg fill="currentColor" height="13" viewBox="0 0 16 16" width="13" xmlns="http://www.w3.org/2000/svg"><path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1z"/><path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5zm-3-1A1.5 1.5 0 0 0 5 1.5H3.5a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h9a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2H11A1.5 1.5 0 0 0 9.5 0z"/></svg>
+                                            </button>
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="d-inline-flex align-items-center gap-1">
+                                            <a class="small" href="<?= $url ?>" rel="noopener"
+                                               target="_blank"
+                                               data-bs-toggle="tooltip" data-bs-placement="top"
+                                               data-bs-title="<?= $url ?>">open ↗</a>
+                                            <button class="btn btn-sm p-0 border-0 text-muted copy-btn lh-1"
+                                                    data-copy="<?= $url ?>" type="button"
+                                                    aria-label="Kopiuj URL">
+                                                <svg fill="currentColor" height="13" viewBox="0 0 16 16" width="13" xmlns="http://www.w3.org/2000/svg"><path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1z"/><path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5zm-3-1A1.5 1.5 0 0 0 5 1.5H3.5a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h9a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2H11A1.5 1.5 0 0 0 9.5 0z"/></svg>
+                                            </button>
+                                        </span>
+                                    </td>
                                     <td><?= h($row["password"]) ?></td>
                                     <td><?= (int) $row["chosen_images_count"] ?></td>
                                 </tr>
@@ -133,23 +166,38 @@ require __DIR__.'/../_layout_head.php';
         </div>
     </div>
 </div>
-<script>
-    const session_name_input = document.getElementById('session_name');
-    const session_url_input = document.getElementById('session_url');
+<?php
+$_base_url = json_encode(BASE_URL, JSON_HEX_TAG);
+$page_scripts = <<<JS
+document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => new bootstrap.Tooltip(el));
 
-    const replacePolishLetters = (text) => {
-        const expression = /[ąćęłńóśźż]/gi;
-        const replacements = {
-            'ą': 'a', 'ć': 'c', 'ę': 'e', 'ł': 'l', 'ń': 'n', 'ó': 'o', 'ś': 's', 'ź': 'z', 'ż': 'z',
-            'Ą': 'A', 'Ć': 'C', 'Ę': 'E', 'Ł': 'L', 'Ń': 'N', 'Ó': 'O', 'Ś': 'S', 'Ź': 'Z', 'Ż': 'Z'
-        };
-        return text.replace(expression, (letter) => replacements[letter]);
-    };
-
-    session_name_input.addEventListener('input', (e) => {
-        session_url_input.value = "<?= h(BASE_URL) ?>/sesja/"
-            + replacePolishLetters(e.target.value).toLowerCase().trim()
-                .replaceAll(/[^0-9a-z ]/gi, '').replaceAll(/\s+/g, '_');
+document.querySelectorAll('.copy-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+        try {
+            await navigator.clipboard.writeText(btn.dataset.copy);
+            btn.classList.add('text-success');
+            setTimeout(() => btn.classList.remove('text-success'), 1500);
+        } catch (_) {}
     });
-</script>
-<?php require __DIR__.'/../_layout_foot.php'; ?>
+});
+
+const session_name_input = document.getElementById('session_name');
+const session_url_input = document.getElementById('session_url');
+
+const replacePolishLetters = (text) => {
+    const expression = /[ąćęłńóśźż]/gi;
+    const replacements = {
+        'ą': 'a', 'ć': 'c', 'ę': 'e', 'ł': 'l', 'ń': 'n', 'ó': 'o', 'ś': 's', 'ź': 'z', 'ż': 'z',
+        'Ą': 'A', 'Ć': 'C', 'Ę': 'E', 'Ł': 'L', 'Ń': 'N', 'Ó': 'O', 'Ś': 'S', 'Ź': 'Z', 'Ż': 'Z'
+    };
+    return text.replace(expression, (letter) => replacements[letter]);
+};
+
+session_name_input.addEventListener('input', (e) => {
+    session_url_input.value = {$_base_url} + '/sesja/'
+        + replacePolishLetters(e.target.value).toLowerCase().trim()
+            .replaceAll(/[^0-9a-z ]/gi, '').replaceAll(/\s+/g, '_');
+});
+JS;
+require __DIR__.'/../_layout_foot.php';
+?>
