@@ -1,0 +1,28 @@
+<?php
+// Copy this file to config.local.php and fill in your values.
+// config.local.php is git-ignored and must NEVER be committed.
+//
+// Placement:
+//   Local dev  — put config.local.php alongside config.php (project root).
+//   Shared hosting — upload it to the same directory (inside public_html/).
+//     Direct HTTP access is blocked by the <Files> rule in .htaccess.
+//   Docker — env vars in docker-compose.yml take precedence; this file is
+//     not required when running via Docker.
+//
+// Generating ADMIN_PASSWORD (run once, paste the output):
+//   php -r "echo password_hash('your-password', PASSWORD_BCRYPT) . PHP_EOL;"
+
+return [
+    // Database connection
+    'DB_HOST' => 'localhost',   // typically 'localhost' on shared hosting
+    'DB_USER' => '',            // database username
+    'DB_PASS' => '',            // database password
+    'DB_NAME' => '',            // database name
+
+    // Public URL of the site — no trailing slash
+    'BASE_URL' => 'https://your-domain.com',
+
+    // Admin panel password as a bcrypt hash.
+    // Generate: php -r "echo password_hash('your-password', PASSWORD_BCRYPT) . PHP_EOL;"
+    'ADMIN_PASSWORD' => '',
+];

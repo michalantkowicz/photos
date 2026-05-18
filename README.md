@@ -1,28 +1,60 @@
-# ewelina.antkowicz.pl — local dev + E2E
+# Photo Gallery — local dev + E2E
 
-Original PHP gallery, now runnable on a laptop with Docker plus a Playwright
-regression suite that captures the current observable behavior.
+PHP photo gallery, runnable on a laptop with Docker plus a Playwright
+regression suite that captures the current observable behaviour.
 
 ## Layout (added pieces)
 
 ```
-config.php               # env-driven constants, prod defaults preserved
+config.local.php.example    # configuration template — copy to config.local.php and fill in values
+config.php                  # loads config.local.php or env vars; dies with a clear message if anything is missing
 docker/
-  Dockerfile             # php:8.1-apache + mysqli + mod_rewrite
-  apache-vhost.conf      # AllowOverride All so .htaccess is honoured
-  htaccess               # Docker .htaccess (no shared-hosting AddHandler)
-docker-compose.yml       # app + mysql, mounts this directory as the docroot
-db/init.sql              # schema + 2 fixture sessions used by E2E
+  Dockerfile                # php:8.1-apache + mysqli + mod_rewrite
+  apache-vhost.conf         # AllowOverride All so .htaccess is honoured
+  htaccess                  # Docker .htaccess (no shared-hosting AddHandler)
+docker-compose.yml          # app + mysql, mounts this directory as the docroot
+db/init.sql                 # schema + 2 fixture sessions used by E2E
 tests/
   package.json
   playwright.config.ts
-  globalSetup.ts         # resets DB + writes fixture JPEGs before each run
-  e2e/*.spec.ts          # Playwright suites
+  globalSetup.ts            # resets DB + writes fixture JPEGs before each run
+  e2e/*.spec.ts             # Playwright suites
 ```
 
-The production PHP files were patched only to pull DB credentials and the base
-URL from `config.php` (which honors env vars with prod-default fallbacks) —
-nothing else changed in behaviour.
+## Configuration
+
+All environment-specific values (DB credentials, site URL, admin password)
+live outside the codebase. **No default credentials are baked into the code.**
+
+### For local dev (non-Docker) and shared hosting
+
+Copy the template and fill in your values:
+
+```bash
+cp config.local.php.example config.local.php
+# edit config.local.php with your values
+```
+
+To generate an `ADMIN_PASSWORD` bcrypt hash:
+
+```bash
+php -r "echo password_hash('your-password', PASSWORD_BCRYPT) . PHP_EOL;"
+```
+
+`config.local.php` is blocked from direct HTTP access via `.htaccess` and is
+listed in `.gitignore` — it must never be committed.
+
+### For Docker (local dev with the compose stack)
+
+`docker-compose.yml` sets all env vars directly. No `config.local.php` needed.
+Env vars always take precedence over the file.
+
+### For shared hosting (production deploy)
+
+Upload `config.local.php` alongside `config.php` inside `public_html/`.
+The `<Files>` rule in `.htaccess` prevents Apache from serving it directly.
+Alternatively, place it one level above `public_html/` (outside the webroot)
+— `config.php` checks both locations.
 
 ## Run locally
 
@@ -53,31 +85,14 @@ npm test
 
 What's covered (see `tests/e2e/*.spec.ts`):
 
-- `admin-auth` — password form, wrong password, login, logout
+- `admin-auth` — password form, wrong password, login, logout, rate-limiting
 - `gallery-public` — open session, 3 photos, 404 for unknown URL
-- `gallery-password` — password form, wrong password, unlock
-- `selection-persistence` — pick photos, save, reload shows them checked; re-submitting replaces prior choice, snapshot history retained
-- `admin-listing` — sessions table, file counts, chosen-image counts
+- `gallery-password` — password form, wrong/right password, unlock
+- `selection-persistence` — pick photos, save, reload shows them checked; re-submitting replaces prior choice, snapshot history retained; 403 for unauthorised POST
+- `admin-listing` — sessions table, file counts, chosen-image counts, password plaintext display
 - `admin-create-session` — upload form creates a new session + writes photo to disk
+- `end-to-end-workflows` — user→admin chains in separate browser contexts
+- `photo-proxy` — auth matrix, path traversal, extension allowlist, webroot blocking
 
 `tests/globalSetup.ts` re-runs `db/init.sql` and re-creates the fixture photo
-directories (`00000000-0000-4000-8000-00000000000{1,2}/`) on every run, so
-tests start from a known state.
-
-## Production defaults
-
-`config.php` uses these defaults when env vars are unset — they match what
-was hard-coded in the original files, so deploying to prod with no env
-overrides preserves current behaviour exactly:
-
-| Constant              | Prod default                                                  |
-|-----------------------|---------------------------------------------------------------|
-| `DB_HOST`             | `localhost`                                                   |
-| `DB_USER`             | `mantkowi_ewelina`                                            |
-| `DB_PASS`             | (the previously hardcoded password)                           |
-| `DB_NAME`             | `mantkowi_ewelina_sessions`                                   |
-| `BASE_URL`            | `http://ewelina.antkowicz.pl`                                 |
-| `ADMIN_PASSWORD_MD5`  | `4e6ca650f52383d9054a826b0b4db1f5` (the original MD5)         |
-
-In docker-compose, `BASE_URL=http://localhost:8080` and the admin password is
-overridden to `admin` so tests have a known credential.
+directories before every run, so tests start from a known state.

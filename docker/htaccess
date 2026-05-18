@@ -1,3 +1,8 @@
+<Files "config.local.php">
+    Order allow,deny
+    Deny from all
+</Files>
+
 RewriteEngine On
 RewriteRule ^sesja/([^/]*)$ /?sesja=$1 [L]
 RewriteCond %{REQUEST_FILENAME} !-f

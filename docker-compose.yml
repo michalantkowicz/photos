@@ -12,8 +12,8 @@ services:
       - ./docker/htaccess:/var/www/html/.htaccess
     environment:
       DB_HOST: db
-      DB_USER: ewelina
-      DB_PASS: ewelina
+      DB_USER: app
+      DB_PASS: app
       DB_NAME: sessions
       BASE_URL: http://localhost:8080
       # bcrypt hash of "admin"
@@ -28,8 +28,8 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: sessions
-      MYSQL_USER: ewelina
-      MYSQL_PASSWORD: ewelina
+      MYSQL_USER: app
+      MYSQL_PASSWORD: app
     ports:
       # Mapped to 3307 to avoid clashing with a host MySQL on 3306
       - "3307:3306"

@@ -1,5 +1,11 @@
 SecRuleRemoveById 950115
 AddHandler application/x-httpd-php81 php
+
+<Files "config.local.php">
+    Order allow,deny
+    Deny from all
+</Files>
+
 RewriteEngine On
 RewriteRule ^sesja/([^/]*)$ /?sesja=$1 [L]
 RewriteCond %{REQUEST_FILENAME} !-f
