@@ -16,5 +16,8 @@ config.local.php
 /tests/node_modules/
 /tests/fixtures/
 
+# Audit logs — runtime output, never commit
+/logs/*.log
+
 # Local editor state
 /.claude/

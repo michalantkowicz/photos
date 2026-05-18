@@ -15,10 +15,12 @@ $sessionId    = $_POST['session_id'];
 // has no password). CSRF alone only proves "same browser" — not "may touch session X."
 $sessionRow = q("SELECT password FROM session WHERE id = ?", [$sessionId])->fetch_assoc();
 if (!$sessionRow) {
+    audit_log('choices_session_not_found', ['session_id' => $sessionId]);
     http_response_code(404);
     die('Session not found');
 }
 if (!is_admin() && !gallery_is_unlocked($sessionId) && !empty($sessionRow['password'])) {
+    audit_log('choices_forbidden', ['session_id' => $sessionId]);
     http_response_code(403);
     die('Forbidden');
 }
@@ -51,5 +53,10 @@ try {
     $conn->rollback();
     die('Failed to save choices');
 }
+
+audit_log('choices_submitted', [
+    'session_id' => $sessionId,
+    'count'      => count($chosenImages),
+]);
 
 safe_redirect(BASE_URL);

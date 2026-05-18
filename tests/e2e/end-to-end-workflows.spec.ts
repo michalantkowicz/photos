@@ -33,8 +33,8 @@ test('user submits photo choices and the admin sees them in the listing', async 
 
   const row = adminPage.locator('table tbody tr').filter({ hasText: FIXTURE_NO_PWD.name });
   await expect(row).toHaveCount(1);
-  // The last <td> is the "Liczba wybranych zdjęć" column.
-  await expect(row.locator('td').last()).toHaveText('3');
+  // nth(6) = "Liczba wybranych zdjęć" (nth(7) is the delete button)
+  await expect(row.locator('td').nth(6)).toHaveText('3');
   await adminCtx.close();
 });
 

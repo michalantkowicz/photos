@@ -12,6 +12,7 @@ $url = BASE_URL.'/sesja/'.$_GET['sesja'];
 
 $result = q("SELECT id, name, description, password FROM session WHERE url = ?", [$url]);
 if ($result->num_rows === 0) {
+    audit_log('gallery_not_found', ['path' => $_GET['sesja']]);
     die("Unexpected error during loading session. Contact administrator.");
 }
 $row = $result->fetch_assoc();
@@ -58,15 +59,18 @@ require __DIR__.'/_layout_head.php';
 
 <?php
 if (empty($row['password']) || gallery_is_unlocked($row['id'])) {
+    audit_log('gallery_accessed', ['session_id' => $row['id'], 'session_name' => $row['name']]);
     include __DIR__.'/security/gallery.php';
 } else {
     $login_failed = false;
     if (isset($_POST['password'])) {
         if (verify_session_password($_POST['password'], $row['password'])) {
+            audit_log('gallery_unlocked', ['session_id' => $row['id'], 'session_name' => $row['name']]);
             gallery_unlock($row['id']);
             header('Location: '.$url);
             exit;
         }
+        audit_log('gallery_unlock_failed', ['session_id' => $row['id'], 'session_name' => $row['name']]);
         $login_failed = true;
     }
     ?>

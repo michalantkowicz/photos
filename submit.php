@@ -42,4 +42,10 @@ q(
     [$sessionId, $sessionName, $sessionUrl, $sessionDescription, implode("\n", $savedFilenames), $sessionPassword]
 );
 
+audit_log('session_created', [
+    'session_id'   => $sessionId,
+    'session_name' => $sessionName,
+    'files'        => count($savedFilenames),
+]);
+
 safe_redirect(BASE_URL.'/admin');

@@ -21,9 +21,11 @@ function admin_login(): void {
     session_regenerate_id(true);
     $_SESSION['is_admin'] = true;
     unset($_SESSION['csrf']); // rotate CSRF token on privilege escalation
+    audit_log('login_success');
 }
 
 function admin_logout(): void {
+    audit_log('logout');
     $_SESSION = [];
     if (ini_get('session.use_cookies')) {
         $params = session_get_cookie_params();
@@ -103,6 +105,7 @@ function check_login_rate_limit(): void {
     $row    = q("SELECT COUNT(*) AS n FROM login_attempts WHERE ip = ? AND attempted_at >= ?",
                 [$ip, $window])->fetch_assoc();
     if ((int)($row['n'] ?? 0) >= 5) {
+        audit_log('login_rate_limited', ['ip' => $ip]);
         http_response_code(429);
         die('Zbyt wiele prób logowania. Spróbuj ponownie za 10 minut.');
     }
@@ -111,6 +114,7 @@ function check_login_rate_limit(): void {
 /** Record one failed admin login attempt. Prunes entries older than 24 h. */
 function record_failed_login(): void {
     $ip = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+    audit_log('login_failure', ['ip' => $ip]);
     q("INSERT INTO login_attempts (ip, attempted_at) VALUES (?, NOW())", [$ip]);
     q("DELETE FROM login_attempts WHERE attempted_at < DATE_SUB(NOW(), INTERVAL 24 HOUR)");
 }

@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__.'/log.php';
+
 // Load config.local.php if it exists (project root first, then one level up
 // for shared-hosting layouts where config lives outside the webroot).
 // Env vars always take precedence over the file (Docker uses env vars).

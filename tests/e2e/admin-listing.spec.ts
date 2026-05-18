@@ -70,8 +70,8 @@ test('admin listing reflects chosen image counts after a client selection', asyn
   await loginAdmin(page);
 
   const openRow = page.locator('table tbody tr').filter({ hasText: FIXTURE_NO_PWD.name });
-  // Last <td> = chosen_images_count
-  await expect(openRow.locator('td').last()).toHaveText('2');
+  // nth(6) = chosen_images_count (nth(7) is the delete button)
+  await expect(openRow.locator('td').nth(6)).toHaveText('2');
 });
 
 test('ID badge shows full UUID in tooltip on hover', async ({ page }) => {

@@ -104,6 +104,7 @@ require __DIR__.'/../_layout_head.php';
                                 <th scope="col">URL</th>
                                 <th scope="col">Hasło</th>
                                 <th scope="col">Liczba wybranych zdjęć</th>
+                                <th scope="col"></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -114,7 +115,7 @@ require __DIR__.'/../_layout_head.php';
                                            (SELECT count(*) FROM choice WHERE session_id = session.id) AS chosen_images_count
                                          FROM session");
                             if ($result->num_rows === 0) {
-                                echo '<tr><td colspan="7">0 results</td></tr>';
+                                echo '<tr><td colspan="8">0 results</td></tr>';
                             }
                             while ($row = $result->fetch_assoc()):
                                 $url = h($row["url"]);
@@ -157,11 +158,42 @@ require __DIR__.'/../_layout_head.php';
                                     </td>
                                     <td><?= h($row["password"]) ?></td>
                                     <td><?= (int) $row["chosen_images_count"] ?></td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-danger delete-session-btn"
+                                                data-session-id="<?= h($row['id']) ?>"
+                                                data-session-name="<?= h($row['name']) ?>"
+                                                type="button" aria-label="Usuń sesję">
+                                            <svg fill="currentColor" height="13" viewBox="0 0 16 16" width="13" xmlns="http://www.w3.org/2000/svg"><path d="M6.5 1h3a.5.5 0 0 1 .5.5v1H6v-1a.5.5 0 0 1 .5-.5M11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3A1.5 1.5 0 0 0 5 1.5v1H2.506a.58.58 0 0 0-.01 0H1.5a.5.5 0 0 0 0 1h.538l.853 10.66A2 2 0 0 0 4.885 16h6.23a2 2 0 0 0 1.994-1.84l.853-10.66h.538a.5.5 0 0 0 0-1h-.995a.59.59 0 0 0-.01 0zm1.958 1-.846 10.58a1 1 0 0 1-.997.92h-6.23a1 1 0 0 1-.997-.92L3.042 3.5zM5.509 5.47a.5.5 0 0 1 .528.47l.5 8.5a.5.5 0 0 1-.998.06L5 5.97a.5.5 0 0 1 .47-.53zm5.058 0a.5.5 0 0 1 .47.53l-.5 8.5a.5.5 0 1 1-.998-.06l.5-8.5a.5.5 0 0 1 .528-.47M8 4.5a.5.5 0 0 1 .5.5v8.5a.5.5 0 0 1-1 0V5a.5.5 0 0 1 .5-.5"/></svg>
+                                        </button>
+                                    </td>
                                 </tr>
                             <?php endwhile; ?>
                         </tbody>
                     </table>
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div aria-hidden="true" aria-labelledby="deleteModalLabel" class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteModalLabel">Usuń sesję</h5>
+                <button aria-label="Zamknij" class="btn-close" data-bs-dismiss="modal" type="button"></button>
+            </div>
+            <div class="modal-body">
+                <p>Czy na pewno chcesz usunąć sesję <strong id="deleteModalSessionName"></strong>?</p>
+                <p class="text-danger small mb-0">Operacja usunie wszystkie zdjęcia i wybory klientów. Nie można jej cofnąć.</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal" type="button">Anuluj</button>
+                <form action="delete_session.php" method="post">
+                    <?= csrf_field() ?>
+                    <input id="deleteSessionId" name="session_id" type="hidden">
+                    <button class="btn btn-danger" type="submit">Usuń</button>
+                </form>
             </div>
         </div>
     </div>
@@ -197,6 +229,14 @@ session_name_input.addEventListener('input', (e) => {
     session_url_input.value = {$_base_url} + '/sesja/'
         + replacePolishLetters(e.target.value).toLowerCase().trim()
             .replaceAll(/[^0-9a-z ]/gi, '').replaceAll(/\s+/g, '_');
+});
+
+document.querySelectorAll('.delete-session-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.getElementById('deleteModalSessionName').textContent = btn.dataset.sessionName;
+        document.getElementById('deleteSessionId').value = btn.dataset.sessionId;
+        new bootstrap.Modal(document.getElementById('deleteModal')).show();
+    });
 });
 JS;
 require __DIR__.'/../_layout_foot.php';

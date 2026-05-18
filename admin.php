@@ -9,6 +9,7 @@ if (isset($_GET['logout'])) {
 }
 
 if (is_admin()) {
+    audit_log('admin_dashboard_visit');
     include __DIR__.'/security/admin.php';
     exit;
 }
@@ -25,6 +26,7 @@ if (isset($_POST['password'])) {
     $login_failed = true;
 }
 
+audit_log('admin_login_form_shown');
 $page_title = 'Panel administratora';
 require __DIR__.'/_layout_head.php';
 ?>
