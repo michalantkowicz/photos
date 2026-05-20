@@ -8,12 +8,16 @@ $session_count = (int) q("SELECT COUNT(*) AS n FROM session")->fetch_assoc()['n'
 $page_title = 'Panel administratora';
 $page_css = [
     'https://cdn.jsdelivr.net/npm/datatables.net-bs5@2.2.2/css/dataTables.bootstrap5.min.css',
+    'https://cdn.jsdelivr.net/npm/datatables.net-buttons-bs5@3.2.2/css/buttons.bootstrap5.min.css',
     'https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css',
 ];
 $extra_scripts = [
     'https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js',
     'https://cdn.jsdelivr.net/npm/datatables.net@2.2.2/js/dataTables.min.js',
     'https://cdn.jsdelivr.net/npm/datatables.net-bs5@2.2.2/js/dataTables.bootstrap5.min.js',
+    'https://cdn.jsdelivr.net/npm/datatables.net-buttons@3.2.2/js/dataTables.buttons.min.js',
+    'https://cdn.jsdelivr.net/npm/datatables.net-buttons-bs5@3.2.2/js/buttons.bootstrap5.min.js',
+    'https://cdn.jsdelivr.net/npm/datatables.net-buttons@3.2.2/js/buttons.html5.min.js',
     'https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.js',
 ];
 require __DIR__.'/../_layout_head.php';
@@ -385,7 +389,36 @@ DataTable.ext.search.push(function(settings, data) {
 
 const dt = new DataTable('#sessions-table', {
     paging: false,
-    layout: { topStart: null, topEnd: null, bottomStart: null, bottomEnd: null },
+    layout: { topStart: 'buttons', topEnd: null, bottomStart: null, bottomEnd: null },
+    buttons: [{
+        extend: 'csvHtml5',
+        text: 'Pobierz CSV',
+        className: 'btn-sm btn-outline-success',
+        filename: 'sesje',
+        // Default modifier exports the filtered + sorted rows across all pages,
+        // so the CSV reflects the column searches and the date-range filter.
+        exportOptions: {
+            columns: [0, 1, 2, 3, 4, 5, 6, 7], // skip the action column (8)
+            format: {
+                // Cells render rich HTML (badges, links, copy buttons). Export
+                // plain text — and for the ID/URL columns the real value lives
+                // in the .visually-hidden span, not the visible chrome.
+                body: function(data, row, column, node) {
+                    if (!node) return data;
+                    const hidden = node.querySelector('.visually-hidden');
+                    const text = hidden ? hidden.textContent : node.textContent;
+                    return text.replace(/\s+/g, ' ').trim();
+                },
+                // Header cells carry an injected search input / clear button;
+                // the column title is the first (text) child node.
+                header: function(data, column, node) {
+                    return node && node.childNodes[0]
+                        ? node.childNodes[0].textContent.trim()
+                        : data;
+                },
+            },
+        },
+    }],
     order: [[0, 'desc']],
     columnDefs: [{ targets: 8, orderable: false, searchable: false }],
     initComplete: function() {
