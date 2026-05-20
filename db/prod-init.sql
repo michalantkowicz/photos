@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS session (
     description TEXT,
     file_names  TEXT,
     password    VARCHAR(255) DEFAULT NULL,
+    email       VARCHAR(255) DEFAULT NULL,
     created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE KEY uniq_url (url)
 );

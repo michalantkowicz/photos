@@ -98,14 +98,17 @@ require __DIR__.'/../_layout_head.php';
                             </div>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label" for="session_password">Hasło</label>
+                            <label class="form-label" for="session_password">Hasło <span class="text-muted">(opcjonalnie)</span></label>
                             <input class="form-control" id="session_password" name="session_password" value="" type="text">
-                            <div class="form-text">Zostaw puste jeśli sesja nie ma być chroniona hasłem.</div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="session_email">E-mail klienta <span class="text-muted">(opcjonalnie)</span></label>
+                            <input class="form-control" id="session_email" name="session_email" type="email">
                         </div>
                         <div class="mb-3">
                             <div class="d-flex align-items-center gap-2 mb-1">
-                                <label class="form-label mb-0" for="session_description">Opis sesji</label>
-                                <div class="form-check mb-0">
+                                <label class="form-label mb-0" for="session_description">Opis sesji <span class="text-muted">(opcjonalnie)</span></label>
+                                <div class="form-check mb-0 ms-3">
                                     <input class="form-check-input" id="remember_description" type="checkbox">
                                     <label class="form-check-label small text-muted" for="remember_description">zapamiętaj</label>
                                 </div>
@@ -152,7 +155,15 @@ require __DIR__.'/../_layout_head.php';
                             <?php
                             // Qualify session.id explicitly: adding any column to `choice` (e.g. a PK)
                             // would otherwise rebind the subquery and silently zero the count.
-                            $result = q("SELECT id, name, url, description, file_names, password, created_at,
+                            // Templates for the "share" mailto link. A missing body template
+                            // -> no share links (buttons fall back to the disabled state); a
+                            // missing topic template just omits the subject.
+                            $mail_template = @file_get_contents(__DIR__.'/../mail_template');
+                            if (!is_string($mail_template)) { $mail_template = ''; }
+                            $mail_topic_template = @file_get_contents(__DIR__.'/../mail_topic_template');
+                            if (!is_string($mail_topic_template)) { $mail_topic_template = ''; }
+
+                            $result = q("SELECT id, name, url, description, file_names, password, email, created_at,
                                            (SELECT count(*) FROM choice WHERE session_id = session.id) AS chosen_images_count
                                          FROM session");
                             if ($result->num_rows === 0) {
@@ -161,6 +172,25 @@ require __DIR__.'/../_layout_head.php';
                             while ($row = $result->fetch_assoc()):
                                 $url = h($row["url"]);
                                 $has_choices = (int) $row["chosen_images_count"] > 0;
+
+                                // "Share" mailto: the client e-mail as recipient, mail_template
+                                // as the body with {url} / {password} filled in. Empty when the
+                                // session has no e-mail or the template file is missing.
+                                $share_email  = (string) ($row['email'] ?? '');
+                                $share_mailto = '';
+                                if ($share_email !== '' && $mail_template !== '') {
+                                    $tokens = [
+                                        '{url}'      => (string) $row['url'],
+                                        '{password}' => (string) ($row['password'] ?? ''),
+                                    ];
+                                    $share_body   = strtr($mail_template, $tokens);
+                                    $share_topic  = trim(strtr($mail_topic_template, $tokens));
+                                    $share_mailto = 'mailto:'.rawurlencode($share_email).'?';
+                                    if ($share_topic !== '') {
+                                        $share_mailto .= 'subject='.rawurlencode($share_topic).'&';
+                                    }
+                                    $share_mailto .= 'body='.rawurlencode($share_body);
+                                }
                             ?>
                                 <tr<?= $has_choices ? ' style="--bs-table-bg: rgba(25,135,84,0.1);"' : '' ?>>
                                     <td class="text-nowrap text-muted small"><?= h(substr($row['created_at'] ?? '', 0, 16)) ?></td>
@@ -202,7 +232,21 @@ require __DIR__.'/../_layout_head.php';
                                     <td><?= h($row["password"]) ?></td>
                                     <td><?= 1 + substr_count($row["file_names"] ?? '', "\n") ?></td>
                                     <td><?= (int) $row["chosen_images_count"] ?></td>
-                                    <td>
+                                    <td class="text-nowrap">
+                                        <?php if ($share_mailto !== ''): ?>
+                                        <a class="btn btn-sm btn-outline-primary me-1"
+                                           href="<?= h($share_mailto) ?>"
+                                           data-bs-toggle="tooltip" data-bs-placement="top"
+                                           data-bs-title="Wyślij e-mail do: <?= h($share_email) ?>"
+                                           aria-label="Udostępnij sesję e-mailem">
+                                            <svg fill="currentColor" height="13" viewBox="0 0 16 16" width="13" xmlns="http://www.w3.org/2000/svg"><path d="M0 4a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2zm2-1a1 1 0 0 0-1 1v.217l7 4.2 7-4.2V4a1 1 0 0 0-1-1zm13 2.383-4.708 2.825L15 11.105zm-.034 6.876-5.64-3.471L8 9.583l-1.326-.795-5.64 3.47A1 1 0 0 0 2 13h12a1 1 0 0 0 .966-.741M1 11.105l4.708-2.897L1 5.383z"/></svg>
+                                        </a>
+                                        <?php else: ?>
+                                        <button class="btn btn-sm btn-outline-secondary me-1" type="button" disabled
+                                                title="Brak e-maila klienta dla tej sesji">
+                                            <svg fill="currentColor" height="13" viewBox="0 0 16 16" width="13" xmlns="http://www.w3.org/2000/svg"><path d="M0 4a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2zm2-1a1 1 0 0 0-1 1v.217l7 4.2 7-4.2V4a1 1 0 0 0-1-1zm13 2.383-4.708 2.825L15 11.105zm-.034 6.876-5.64-3.471L8 9.583l-1.326-.795-5.64 3.47A1 1 0 0 0 2 13h12a1 1 0 0 0 .966-.741M1 11.105l4.708-2.897L1 5.383z"/></svg>
+                                        </button>
+                                        <?php endif; ?>
                                         <button class="btn btn-sm btn-outline-danger delete-session-btn"
                                                 data-session-id="<?= h($row['id']) ?>"
                                                 data-session-name="<?= h($row['name']) ?>"

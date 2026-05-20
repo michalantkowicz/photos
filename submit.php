@@ -14,6 +14,9 @@ $sessionDescription = $_POST['session_description'] ?? '';
 // can read them back from the listing. verify_session_password() still
 // accepts bcrypt for any rows that were hashed in the past.
 $sessionPassword    = $_POST['session_password']    ?? '';
+// Optional client e-mail — used only to pre-fill the "share" mailto link in
+// the admin listing. Not shown to clients, not used for auth.
+$sessionEmail       = $_POST['session_email']        ?? '';
 
 $photoDir = __DIR__.'/data/'.$sessionId;
 if (!is_dir($photoDir)) {
@@ -38,8 +41,8 @@ for ($i = 0, $n = count($names); $i < $n; $i++) {
 }
 
 q(
-    "INSERT INTO session (id, name, url, description, file_names, password) VALUES (?, ?, ?, ?, ?, ?)",
-    [$sessionId, $sessionName, $sessionUrl, $sessionDescription, implode("\n", $savedFilenames), $sessionPassword]
+    "INSERT INTO session (id, name, url, description, file_names, password, email) VALUES (?, ?, ?, ?, ?, ?, ?)",
+    [$sessionId, $sessionName, $sessionUrl, $sessionDescription, implode("\n", $savedFilenames), $sessionPassword, $sessionEmail]
 );
 
 audit_log('session_created', [

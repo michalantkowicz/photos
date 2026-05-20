@@ -78,6 +78,7 @@ export interface CreatedSession {
   slug: string;
   url: string;          // path-only, e.g. "/sesja/foo"
   password?: string;
+  email?: string;
 }
 
 /** Driven through the admin UI: opens the accordion, fills the form, uploads
@@ -85,7 +86,7 @@ export interface CreatedSession {
  *  The session_id is generated server-side now; we read it back by URL. */
 export async function adminCreateSession(
   page: Page,
-  opts: { name: string; slug: string; password?: string },
+  opts: { name: string; slug: string; password?: string; email?: string },
 ): Promise<CreatedSession> {
   const formPanel = page.locator('#panelsStayOpen-collapseTwo');
   if (!await formPanel.isVisible()) {
@@ -103,6 +104,10 @@ export async function adminCreateSession(
 
   if (opts.password) {
     await page.fill('input[name="session_password"]', opts.password);
+  }
+
+  if (opts.email) {
+    await page.fill('input[name="session_email"]', opts.email);
   }
 
   await page.fill('textarea[name="session_description"]', 'created by playwright');
@@ -124,5 +129,6 @@ export async function adminCreateSession(
     slug: opts.slug,
     url: '/sesja/' + opts.slug,
     password: opts.password,
+    email: opts.email,
   };
 }
