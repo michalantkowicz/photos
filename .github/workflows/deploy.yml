@@ -1,52 +1,43 @@
 # Deploys the site to the FTP server.
 #
-# It does the same thing as the `lftp ... mirror -R` command you ran by hand,
-# but GitHub runs it for you on a temporary machine when you press a button.
+# Uses lftp — the same tool and the same `mirror -R` command that already
+# works from your machine — so it behaves identically to a manual deploy.
 # All server details (host, login, target folder) live in repo Secrets, so
 # nothing private is written in this file.
 
 name: Deploy to FTP
 
-# "workflow_dispatch" = this workflow ONLY runs when you click the
-# "Run workflow" button in the Actions tab. Nothing deploys automatically.
+# Runs ONLY when you click "Run workflow" in the Actions tab.
 on:
   workflow_dispatch:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest   # the temporary machine GitHub gives us
+    runs-on: ubuntu-latest
     steps:
-      # 1. Copy the repository onto that machine.
+      # 1. Copy the repository onto the temporary build machine.
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2. Upload the files to the FTP server.
-      - name: Upload via FTP
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
-        with:
-          server: ${{ secrets.FTP_HOST }}
-          username: ${{ secrets.FTP_USER }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          protocol: ftps          # encrypted FTP
-          security: loose         # = your "set ssl:verify-certificate false"
-          server-dir: ${{ secrets.FTP_SERVER_DIR }}
+      # 2. Install lftp (not preinstalled on the runner).
+      - name: Install lftp
+        run: sudo apt-get update -qq && sudo apt-get install -y lftp
 
-          # Files/folders that must NOT be uploaded. Anything listed here is
-          # also never deleted on the server — so config.local.php and the
-          # data/ photos are safe no matter what.
-          exclude: |
-            **/.git*
-            **/.git*/**
-            **/node_modules/**
-            docker/**
-            tests/**
-            test-results/**
-            db/**
-            logs/**
-            data/**
-            AGENT.md
-            README.md
-            docker-compose.yml
-            config.local.php
-            config.local.php.example
-            .dockerignore
+      # 3. Upload the files. `mirror -R` sends only new/changed files and never
+      #    deletes anything; the excluded paths (config.local.php, data/, and
+      #    dev-only folders) are never uploaded or touched.
+      - name: Upload via lftp
+        env:
+          FTP_HOST: ${{ secrets.FTP_HOST }}
+          FTP_USER: ${{ secrets.FTP_USER }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          FTP_SERVER_DIR: ${{ secrets.FTP_SERVER_DIR }}
+        run: |
+          lftp <<SCRIPT
+          set ssl:verify-certificate false
+          set cmd:fail-exit yes
+          open -u '$FTP_USER','$FTP_PASSWORD' '$FTP_HOST'
+          cd '$FTP_SERVER_DIR'
+          mirror -R --verbose --exclude-glob .git* --exclude-glob docker/ --exclude-glob tests/ --exclude-glob test-results/ --exclude-glob db/ --exclude-glob logs/ --exclude-glob data/ --exclude AGENT.md --exclude README.md --exclude docker-compose.yml --exclude config.local.php --exclude config.local.php.example --exclude .dockerignore ./ .
+          bye
+          SCRIPT

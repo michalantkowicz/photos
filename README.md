@@ -58,6 +58,10 @@ over FTP when you press a button.
 The workflow uploads the app files and skips dev-only paths. `config.local.php`
 and `data/` are excluded, so they are never overwritten or deleted.
 
+**The upload is additive** — it sends new and changed files but never deletes
+anything. If you delete or rename a file in the repo, remove the stale file
+from the server by hand (over FTP); the workflow will not clean it up.
+
 ### Server-side, by hand (once per environment)
 
 The workflow never touches these:
