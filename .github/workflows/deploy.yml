@@ -26,7 +26,15 @@ jobs:
       # 3. Upload the files. `mirror -R` sends only new/changed files and never
       #    deletes anything; the excluded paths (config.local.php, data/, and
       #    dev-only folders) are never uploaded or touched.
+      #
+      #    The `set` lines make the connection robust on a CI runner:
+      #      - ssl-protect-data    : encrypt the data channel (many FTPS
+      #                              servers stall the transfer without this)
+      #      - dns:order inet      : use IPv4 (avoids IPv6 hangs on runners)
+      #      - net:timeout/retries : fail fast instead of hanging for minutes
+      #    `debug 3` prints the FTP dialogue so a failure shows WHERE it broke.
       - name: Upload via lftp
+        timeout-minutes: 8
         env:
           FTP_HOST: ${{ secrets.FTP_HOST }}
           FTP_USER: ${{ secrets.FTP_USER }}
@@ -35,7 +43,13 @@ jobs:
         run: |
           lftp <<SCRIPT
           set ssl:verify-certificate false
+          set ftp:ssl-protect-data true
+          set dns:order "inet"
+          set net:timeout 20
+          set net:max-retries 2
+          set net:reconnect-interval-base 5
           set cmd:fail-exit yes
+          debug 3
           open -u '$FTP_USER','$FTP_PASSWORD' '$FTP_HOST'
           cd '$FTP_SERVER_DIR'
           mirror -R --verbose --exclude-glob .git* --exclude-glob docker/ --exclude-glob tests/ --exclude-glob test-results/ --exclude-glob db/ --exclude-glob logs/ --exclude-glob data/ --exclude AGENT.md --exclude README.md --exclude docker-compose.yml --exclude config.local.php --exclude config.local.php.example --exclude .dockerignore ./ .
