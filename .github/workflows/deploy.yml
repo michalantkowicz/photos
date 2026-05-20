@@ -52,6 +52,6 @@ jobs:
           debug 3
           open -u '$FTP_USER','$FTP_PASSWORD' '$FTP_HOST'
           cd '$FTP_SERVER_DIR'
-          mirror -R --verbose --exclude-glob .git* --exclude-glob docker/ --exclude-glob tests/ --exclude-glob test-results/ --exclude-glob db/ --exclude-glob logs/ --exclude-glob data/ --exclude AGENT.md --exclude README.md --exclude docker-compose.yml --exclude config.local.php --exclude config.local.php.example --exclude .dockerignore ./ .
+          mirror -R --verbose --exclude-glob .git/ --exclude-glob .github/ --exclude-glob .claude/ --exclude-glob .gitignore --exclude-glob docker/ --exclude-glob tests/ --exclude-glob test-results/ --exclude-glob db/ --exclude-glob logs/ --exclude-glob data/ --exclude AGENT.md --exclude README.md --exclude docker-compose.yml --exclude config.local.php --exclude config.local.php.example --exclude .dockerignore ./ .
           bye
           SCRIPT

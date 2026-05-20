@@ -84,10 +84,12 @@ The workflow never touches these:
 
 ### Manual FTP fallback
 
-If you ever need to deploy without the workflow, from `lftp`:
+If you ever need to deploy without the workflow, from `lftp` — note that
+directory excludes **must end with a trailing slash**, or lftp silently
+skips them (`.git/` works, `.git*` does not):
 
 ```
-mirror -R --exclude-glob .git* --exclude-glob .github/ --exclude-glob docker/ --exclude-glob tests/ --exclude-glob db/ --exclude-glob logs/ --exclude AGENT.md --exclude README.md --exclude docker-compose.yml --exclude config.local.php.example /path/to/project/ .
+mirror -R --exclude-glob .git/ --exclude-glob .github/ --exclude-glob .claude/ --exclude-glob .gitignore --exclude-glob docker/ --exclude-glob tests/ --exclude-glob test-results/ --exclude-glob db/ --exclude-glob logs/ --exclude-glob data/ --exclude AGENT.md --exclude README.md --exclude docker-compose.yml --exclude config.local.php --exclude config.local.php.example --exclude .dockerignore /path/to/project/ .
 ```
 
 ## File map
