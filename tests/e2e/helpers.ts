@@ -111,9 +111,9 @@ export async function adminCreateSession(
     u.value = 'http://localhost:8080/sesja/' + slug;
   }, opts.slug);
 
-  if (opts.password) {
-    await page.fill('input[name="session_password"]', opts.password);
-  }
+  // The password field is pre-filled with a random suggestion, so always set
+  // it explicitly — the requested value, or empty for an open session.
+  await page.fill('input[name="session_password"]', opts.password ?? '');
 
   if (opts.email) {
     await page.fill('input[name="session_email"]', opts.email);

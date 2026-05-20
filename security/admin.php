@@ -103,7 +103,7 @@ require __DIR__.'/../_layout_head.php';
                         </div>
                         <div class="mb-3">
                             <label class="form-label" for="session_password">Hasło <span class="text-muted">(opcjonalnie)</span></label>
-                            <input class="form-control" id="session_password" name="session_password" value="" type="text">
+                            <input class="form-control" id="session_password" name="session_password" value="<?= h(substr(uuid_v4(), 0, 8)) ?>" type="text">
                         </div>
                         <div class="mb-3">
                             <label class="form-label" for="session_email">E-mail klienta <span class="text-muted">(opcjonalnie)</span></label>
@@ -129,7 +129,7 @@ require __DIR__.'/../_layout_head.php';
             </div>
         </div>
         <div class="accordion-item">
-            <h2 class="accordion-header" id="panelsStayOpen-headingOne">
+            <h2 class="accordion-header position-relative" id="panelsStayOpen-headingOne">
                 <button aria-controls="panelsStayOpen-collapseOne" aria-expanded="true" class="accordion-button" data-bs-target="#panelsStayOpen-collapseOne" data-bs-toggle="collapse" type="button">
                     <svg class="bi bi-camera2" fill="currentColor" height="16" style="margin-right: 8px;" viewbox="0 0 16 16" width="16" xmlns="http://www.w3.org/2000/svg">
                         <path d="M5 8c0-1.657 2.343-3 4-3V4a4 4 0 0 0-4 4z"/>
@@ -137,6 +137,9 @@ require __DIR__.'/../_layout_head.php';
                     </svg>
                     Sesje zdjęciowe
                     <span class="badge bg-success ms-2" id="session-count-badge"><?= $session_count ?></span>
+                </button>
+                <button id="csv-export-btn" type="button" class="btn btn-sm btn-light border position-absolute top-50 end-0 translate-middle-y me-5 z-2">
+                    Pobierz CSV
                 </button>
             </h2>
             <div aria-labelledby="panelsStayOpen-headingOne" class="accordion-collapse collapse show" id="panelsStayOpen-collapseOne">
@@ -389,14 +392,14 @@ DataTable.ext.search.push(function(settings, data) {
 
 const dt = new DataTable('#sessions-table', {
     paging: false,
-    layout: { topStart: 'buttons', topEnd: null, bottomStart: null, bottomEnd: null },
+    layout: { topStart: null, topEnd: null, bottomStart: null, bottomEnd: null },
+    // CSV export — not placed in the table layout; fired by the "Pobierz CSV"
+    // button in the accordion header (handler below). The default export
+    // modifier emits the filtered + sorted rows across all pages, so the CSV
+    // reflects the column searches and the date-range filter.
     buttons: [{
         extend: 'csvHtml5',
-        text: 'Pobierz CSV',
-        className: 'btn-sm btn-outline-success',
         filename: 'sesje',
-        // Default modifier exports the filtered + sorted rows across all pages,
-        // so the CSV reflects the column searches and the date-range filter.
         exportOptions: {
             columns: [0, 1, 2, 3, 4, 5, 6, 7], // skip the action column (8)
             format: {
@@ -482,6 +485,8 @@ const dt = new DataTable('#sessions-table', {
         if (saved) api.draw();
     }
 });
+
+document.getElementById('csv-export-btn').addEventListener('click', () => dt.button(0).trigger());
 
 document.querySelector('#deleteModal form').addEventListener('submit', () => {
     const filters = {
