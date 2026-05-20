@@ -1,0 +1,52 @@
+# Deploys the site to the FTP server.
+#
+# It does the same thing as the `lftp ... mirror -R` command you ran by hand,
+# but GitHub runs it for you on a temporary machine when you press a button.
+# All server details (host, login, target folder) live in repo Secrets, so
+# nothing private is written in this file.
+
+name: Deploy to FTP
+
+# "workflow_dispatch" = this workflow ONLY runs when you click the
+# "Run workflow" button in the Actions tab. Nothing deploys automatically.
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest   # the temporary machine GitHub gives us
+    steps:
+      # 1. Copy the repository onto that machine.
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2. Upload the files to the FTP server.
+      - name: Upload via FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_HOST }}
+          username: ${{ secrets.FTP_USER }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          protocol: ftps          # encrypted FTP
+          security: loose         # = your "set ssl:verify-certificate false"
+          server-dir: ${{ secrets.FTP_SERVER_DIR }}
+
+          # Files/folders that must NOT be uploaded. Anything listed here is
+          # also never deleted on the server — so config.local.php and the
+          # data/ photos are safe no matter what.
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/node_modules/**
+            docker/**
+            tests/**
+            test-results/**
+            db/**
+            logs/**
+            data/**
+            AGENT.md
+            README.md
+            docker-compose.yml
+            config.local.php
+            config.local.php.example
+            .dockerignore
