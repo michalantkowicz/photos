@@ -73,20 +73,29 @@ require __DIR__.'/../_layout_head.php';
                 <div class="accordion-body">
                     <form action="submit.php" enctype="multipart/form-data" method="post">
                         <?= csrf_field() ?>
-                        <div class="mb-3">
+                        <div class="mb-3" hidden>
                             <label class="form-label" for="session_id">ID sesji</label>
                             <input class="form-control" id="session_id" name="session_id" readonly type="text" value="(generowane automatycznie)">
                             <div class="form-text">
                                 ID jest losowany przy zapisie sesji - zdjęcia z sesji będą dostępne w folderze o tej nazwie.
                             </div>
                         </div>
-                        <div class="mb-3">
-                            <label class="form-label" for="session_name">Nazwa sesji</label>
-                            <input class="form-control" id="session_name" name="session_name" type="text" required>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label" for="session_url">Link do sesji</label>
-                            <input class="form-control" id="session_url" name="session_url" readonly type="text" value="<?= h(BASE_URL) ?>/sesja/" required>
+                        <div class="row gy-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label" for="session_name">Nazwa sesji</label>
+                                <input class="form-control" id="session_name" name="session_name" type="text" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label invisible d-none d-md-block" aria-hidden="true">&nbsp;</label>
+                                <input id="session_url" name="session_url" type="hidden" value="<?= h(BASE_URL) ?>/sesja/">
+                                <div class="d-flex align-items-center gap-2 flex-nowrap">
+                                    <label class="form-label mb-0 text-nowrap">Link do sesji</label>
+                                    <span id="session_url_text" class="bg-light border rounded font-monospace small text-truncate px-2 py-1" style="min-width:0;"><?= h(BASE_URL) ?>/sesja/</span>
+                                    <button class="btn btn-sm p-0 border-0 text-muted copy-btn lh-1 flex-shrink-0" id="session_url_copy" data-copy="<?= h(BASE_URL) ?>/sesja/" type="button" aria-label="Kopiuj URL">
+                                        <svg fill="currentColor" height="13" viewBox="0 0 16 16" width="13" xmlns="http://www.w3.org/2000/svg"><path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1z"/><path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5zm-3-1A1.5 1.5 0 0 0 5 1.5H3.5a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h9a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2H11A1.5 1.5 0 0 0 9.5 0z"/></svg>
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                         <div class="mb-3">
                             <label class="form-label" for="session_password">Hasło</label>
@@ -250,6 +259,8 @@ document.querySelectorAll('.copy-btn').forEach(btn => {
 
 const session_name_input = document.getElementById('session_name');
 const session_url_input = document.getElementById('session_url');
+const session_url_text  = document.getElementById('session_url_text');
+const session_url_copy  = document.getElementById('session_url_copy');
 
 const replacePolishLetters = (text) => {
     const expression = /[ąćęłńóśźż]/gi;
@@ -261,9 +272,12 @@ const replacePolishLetters = (text) => {
 };
 
 session_name_input.addEventListener('input', (e) => {
-    session_url_input.value = {$_base_url} + '/sesja/'
+    const url = {$_base_url} + '/sesja/'
         + replacePolishLetters(e.target.value).toLowerCase().trim()
             .replaceAll(/[^0-9a-z ]/gi, '').replaceAll(/\s+/g, '_');
+    session_url_input.value = url;
+    session_url_text.textContent = url;
+    session_url_copy.dataset.copy = url;
 });
 
 document.querySelectorAll('.delete-session-btn').forEach(btn => {
