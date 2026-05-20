@@ -1,80 +1,30 @@
-# Photo Gallery — local dev + E2E
+# Photo Proofing Gallery
 
-PHP photo gallery, runnable on a laptop with Docker plus a Playwright
-regression suite that captures the current observable behaviour.
+A tool for photographers to share a photo session with clients and collect
+their orders: the photographer uploads the session's photos in the admin
+panel and shares the gallery (optionally password-protected); the client
+picks the photos they want printed and saves the selection.
 
-## Layout (added pieces)
-
-```
-config.local.php.example    # configuration template — copy to config.local.php and fill in values
-config.php                  # loads config.local.php or env vars; dies with a clear message if anything is missing
-docker/
-  Dockerfile                # php:8.1-apache + mysqli + mod_rewrite
-  apache-vhost.conf         # AllowOverride All so .htaccess is honoured
-  htaccess                  # Docker .htaccess (no shared-hosting AddHandler)
-docker-compose.yml          # app + mysql, mounts this directory as the docroot
-db/init.sql                 # schema + 2 fixture sessions used by E2E
-tests/
-  package.json
-  playwright.config.ts
-  globalSetup.ts            # resets DB + writes fixture JPEGs before each run
-  e2e/*.spec.ts             # Playwright suites
-```
-
-## Configuration
-
-All environment-specific values (DB credentials, site URL, admin password)
-live outside the codebase. **No default credentials are baked into the code.**
-
-### For local dev (non-Docker) and shared hosting
-
-Copy the template and fill in your values:
-
-```bash
-cp config.local.php.example config.local.php
-# edit config.local.php with your values
-```
-
-To generate an `ADMIN_PASSWORD` bcrypt hash:
-
-```bash
-php -r "echo password_hash('your-password', PASSWORD_BCRYPT) . PHP_EOL;"
-```
-
-`config.local.php` is blocked from direct HTTP access via `.htaccess` and is
-listed in `.gitignore` — it must never be committed.
-
-### For Docker (local dev with the compose stack)
-
-`docker-compose.yml` sets all env vars directly. No `config.local.php` needed.
-Env vars always take precedence over the file.
-
-### For shared hosting (production deploy)
-
-Upload `config.local.php` alongside `config.php` inside `public_html/`.
-The `<Files>` rule in `.htaccess` prevents Apache from serving it directly.
-Alternatively, place it one level above `public_html/` (outside the webroot)
-— `config.php` checks both locations.
+Stack: PHP 8.1 + MySQL. Runs locally with Docker, deploys to shared hosting
+with a GitHub Actions button, and has a Playwright E2E suite.
 
 ## Run locally
 
 ```bash
 docker compose up -d --build
-# wait for the db healthcheck (a few seconds), then visit:
-#   http://localhost:8080/admin                       admin (pwd: admin)
-#   http://localhost:8080/sesja/test-no-pwd           open gallery
-#   http://localhost:8080/sesja/test-with-pwd         protected (pwd: test123)
+#   http://localhost:8080/admin                admin       (pwd: admin)
+#   http://localhost:8080/sesja/test-no-pwd    open gallery
+#   http://localhost:8080/sesja/test-with-pwd  protected   (pwd: test123)
+
+docker compose down       # stop, keep the mysql volume
+docker compose down -v    # stop, wipe the mysql volume
 ```
 
-Shut down:
-```bash
-docker compose down            # keeps the named mysql volume
-docker compose down -v         # also wipes the mysql data
-```
+Docker sets every env var itself — no config file needed.
 
 ## Run the E2E suite
 
-Pre-reqs: Node 20+, Docker compose stack already running.
+Pre-reqs: Node 20+, Docker stack already running.
 
 ```bash
 cd tests
@@ -83,110 +33,75 @@ npx playwright install chromium    # first time only
 npm test
 ```
 
-What's covered (see `tests/e2e/*.spec.ts`):
+`tests/globalSetup.ts` re-runs `db/init.sql` and recreates the fixture photos
+before every run. Suites in `tests/e2e/*.spec.ts` cover admin auth, public and
+password galleries, selection persistence, the admin listing, uploads, and the
+photo proxy.
 
-- `admin-auth` — password form, wrong password, login, logout, rate-limiting
-- `gallery-public` — open session, 3 photos, 404 for unknown URL
-- `gallery-password` — password form, wrong/right password, unlock
-- `selection-persistence` — pick photos, save, reload shows them checked; re-submitting replaces prior choice, snapshot history retained; 403 for unauthorised POST
-- `admin-listing` — sessions table, file counts, chosen-image counts, password plaintext display
-- `admin-create-session` — upload form creates a new session + writes photo to disk
-- `end-to-end-workflows` — user→admin chains in separate browser contexts
-- `photo-proxy` — auth matrix, path traversal, extension allowlist, webroot blocking
+## Deploy
 
-`tests/globalSetup.ts` re-runs `db/init.sql` and re-creates the fixture photo
-directories before every run, so tests start from a known state.
+A GitHub Actions workflow (`.github/workflows/deploy.yml`) uploads the site
+over FTP when you press a button.
 
-## Deploy to shared hosting (FTP)
+**One-time setup** — add four repository secrets
+(*Settings → Secrets and variables → Actions*):
 
-There is no automated deploy. The site lives on a shared host and is updated
-over FTP/SFTP with `lftp`.
+| Secret | Value |
+|---|---|
+| `FTP_HOST` | FTP hostname |
+| `FTP_USER` | FTP username |
+| `FTP_PASSWORD` | FTP password |
+| `FTP_SERVER_DIR` | target folder, e.g. `domains/<domain>/public_html/galeria/` |
 
-### What to upload
+**To deploy** — GitHub → **Actions** → **Deploy to FTP** → **Run workflow**.
 
-Everything in the project root **except** dev-only files:
+The workflow uploads the app files and skips dev-only paths. `config.local.php`
+and `data/` are excluded, so they are never overwritten or deleted.
 
-- skip: `docker/`, `docker-compose.yml`, `tests/`, `test-results/`, `db/`,
-  `logs/`, `.git*`, `AGENT.md`, `README.md`, `config.local.php.example`
-- upload: all root `*.php`, `security/`, and an empty `data/` containing
-  only its `.htaccess` (`deny from all`)
+### Server-side, by hand (once per environment)
 
-### Files to create on the server
+The workflow never touches these:
 
-1. `config.local.php` alongside `config.php` inside the webroot. Copy
-   `config.local.php.example`, then fill in `DB_*`, `BASE_URL`, and a bcrypt
+1. **`config.local.php`** — create it in the webroot next to `config.php` (or
+   one level above it — `config.php` checks both). Copy
+   `config.local.php.example` and fill in `DB_*`, `BASE_URL`, and a bcrypt
    `ADMIN_PASSWORD`:
 
    ```bash
-   php -r "echo password_hash('your-password', PASSWORD_BCRYPT) . PHP_EOL;"
+   php -r "echo password_hash('your-password', PASSWORD_BCRYPT).PHP_EOL;"
    ```
 
-2. *(Optional, alternative to `DB_PASS` in `config.local.php`)* a
-   `db-pass.txt` one level **above** the webroot containing the DB password
-   on a single line. Apache cannot serve it because it's outside the
-   document root.
+   It is git-ignored and blocked from HTTP access by `.htaccess`.
 
-### Database schema
+2. **Database** — load `db/prod-init.sql` once via phpMyAdmin (Import tab, or
+   SQL tab → paste → Go). It is idempotent (`CREATE TABLE IF NOT EXISTS`), so
+   re-running it is safe. **Never run `db/init.sql` on production** — it starts
+   with `DROP TABLE`.
 
-On a fresh database, load `db/prod-init.sql` once via phpMyAdmin (SQL tab →
-paste → Go) or:
+### Manual FTP fallback
 
-```bash
-mysql -h HOST -u USER -p DBNAME < db/prod-init.sql
-```
-
-That file is the production-safe variant of `db/init.sql` — no `DROP TABLE`,
-no E2E fixtures. **Never run `db/init.sql` against production** — it starts
-with `DROP TABLE` and would wipe live data.
-
-If the DB already has `session` / `choice` / `choice_snapshot` from a prior
-deploy but is missing the rate-limiter table, run only:
-
-```sql
-CREATE TABLE IF NOT EXISTS login_attempts (
-    ip           VARCHAR(45) NOT NULL,
-    attempted_at DATETIME    NOT NULL,
-    KEY idx_attempts_ip_time (ip, attempted_at)
-);
-```
-
-Without it `auth.php` 500s on every login attempt.
-
-### One-time photo-directory migration
-
-Only relevant if the host already has `public_html/<uuid>/` photo directories
-from before the `data/` refactor — move them under `data/`:
+If you ever need to deploy without the workflow, from `lftp`:
 
 ```
-public_html/<uuid>/  →  public_html/data/<uuid>/
+mirror -R --exclude-glob .git* --exclude-glob .github/ --exclude-glob docker/ --exclude-glob tests/ --exclude-glob db/ --exclude-glob logs/ --exclude AGENT.md --exclude README.md --exclude docker-compose.yml --exclude config.local.php.example /path/to/project/ .
 ```
 
-Skip this and galleries render but every photo 404s.
-
-### lftp commands
-
-From inside lftp (single line — backslash line continuations are not
-supported at the interactive prompt):
+## File map
 
 ```
-mirror -R --exclude-glob docker/ --exclude-glob tests/ --exclude-glob test-results/ --exclude-glob db/ --exclude-glob logs/ --exclude-glob .git* --exclude AGENT.md --exclude README.md --exclude docker-compose.yml --exclude config.local.php.example /path/to/local/project/ .
+config.php                 # loads config.local.php or env vars
+db.php auth.php session.php view.php log.php   # helpers
+index.php                  # /sesja/<slug> gallery entry
+admin.php                  # /admin dashboard entry
+photo.php                  # auth-gated image proxy
+submit.php submit_choices.php delete_session.php   # POST handlers
+security/                  # included dashboard + gallery views (deny from all)
+data/                      # photo storage (deny from all, served via photo.php)
+docker/  db/  tests/        # dev + test only — not deployed
 ```
 
-Or as a one-shot from the shell:
+## Configuration (non-Docker only)
 
-```bash
-lftp -u USER sftp://your-host -e "mirror -R --exclude-glob docker/ --exclude-glob tests/ --exclude-glob test-results/ --exclude-glob db/ --exclude-glob logs/ --exclude-glob .git* --exclude AGENT.md --exclude README.md --exclude docker-compose.yml --exclude config.local.php.example /path/to/local/project/ /domains/your-domain/public_html/; bye"
-```
-
-Useful flags:
-
-- `--dry-run` — preview transfers without uploading
-- `-n` / `--only-newer` — skip files that haven't changed
-- `--delete` — remove remote files that no longer exist locally (use with care)
-
-Upload `config.local.php` separately so it never lands on disk in your
-local working tree:
-
-```
-put /path/to/your/config.local.php
-```
+Docker and the deploy workflow handle configuration themselves. Only if you run
+PHP directly without Docker: `cp config.local.php.example config.local.php` and
+fill in `DB_*`, `BASE_URL`, `ADMIN_PASSWORD`. Env vars override the file.
