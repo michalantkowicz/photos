@@ -18,6 +18,15 @@ $sessionPassword    = $_POST['session_password']    ?? '';
 // the admin listing. Not shown to clients, not used for auth.
 $sessionEmail       = $_POST['session_email']        ?? '';
 
+// The `url` column is UNIQUE (two sessions can't share a slug). Reject a
+// duplicate up front — before creating any files — with a clear message,
+// instead of letting the INSERT throw an uncaught mysqli exception that
+// dumps a fatal error and stack trace at the user.
+if (q("SELECT 1 FROM session WHERE url = ?", [$sessionUrl])->num_rows > 0) {
+    http_response_code(409);
+    die('Sesja o tym adresie już istnieje — wróć w przeglądarce i wybierz inną nazwę sesji.');
+}
+
 $photoDir = __DIR__.'/data/'.$sessionId;
 if (!is_dir($photoDir)) {
     mkdir($photoDir, 0755, true);

@@ -173,12 +173,14 @@ require __DIR__.'/../_layout_head.php';
                             $result = q("SELECT id, name, url, description, file_names, password, email, created_at,
                                            (SELECT count(*) FROM choice WHERE session_id = session.id) AS chosen_images_count
                                          FROM session");
-                            if ($result->num_rows === 0) {
-                                echo '<tr><td colspan="9">0 results</td></tr>';
-                            }
+                            // No manual "empty" row — a hand-written <td colspan> confuses
+                            // DataTables (it reads it as column 0 and warns about column 1).
+                            // DataTables renders its own empty-table message instead.
+                            $existing_urls = [];
                             while ($row = $result->fetch_assoc()):
                                 $url = h($row["url"]);
                                 $has_choices = (int) $row["chosen_images_count"] > 0;
+                                $existing_urls[] = $row["url"]; // for the client-side duplicate-name check
 
                                 // "Share" mailto: the client e-mail as recipient, mail_template
                                 // as the body with {url} / {password} filled in. Empty when the
@@ -237,7 +239,7 @@ require __DIR__.'/../_layout_head.php';
                                         </span>
                                     </td>
                                     <td><?= h($row["password"]) ?></td>
-                                    <td><?= 1 + substr_count($row["file_names"] ?? '', "\n") ?></td>
+                                    <td><?= ($row["file_names"] ?? '') === '' ? 0 : 1 + substr_count($row["file_names"], "\n") ?></td>
                                     <td><?= (int) $row["chosen_images_count"] ?></td>
                                     <td class="text-nowrap">
                                         <?php if ($share_mailto !== ''): ?>
@@ -295,6 +297,7 @@ require __DIR__.'/../_layout_head.php';
 </div>
 <?php
 $_base_url = json_encode(BASE_URL, JSON_HEX_TAG);
+$existing_urls_json = json_encode($existing_urls, JSON_HEX_TAG);
 $page_scripts = <<<JS
 document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => new bootstrap.Tooltip(el));
 
@@ -312,6 +315,7 @@ const session_name_input = document.getElementById('session_name');
 const session_url_input = document.getElementById('session_url');
 const session_url_text  = document.getElementById('session_url_text');
 const session_url_copy  = document.getElementById('session_url_copy');
+const existingUrls = {$existing_urls_json};
 
 const replacePolishLetters = (text) => {
     const expression = /[ąćęłńóśźż]/gi;
@@ -329,6 +333,16 @@ session_name_input.addEventListener('input', (e) => {
     session_url_input.value = url;
     session_url_text.textContent = url;
     session_url_copy.dataset.copy = url;
+
+    // Frontend guard for the UNIQUE url constraint: if this name would
+    // collide with an existing session, mark the field invalid so the
+    // browser blocks submit and shows its native validation popup — the
+    // same UX as an empty required field. submit.php still rechecks.
+    session_name_input.setCustomValidity(
+        existingUrls.includes(url)
+            ? 'Sesja o tej nazwie już istnieje. Wybierz inną nazwę.'
+            : ''
+    );
 });
 
 document.querySelectorAll('.delete-session-btn').forEach(btn => {
@@ -392,6 +406,7 @@ DataTable.ext.search.push(function(settings, data) {
 
 const dt = new DataTable('#sessions-table', {
     paging: false,
+    language: { emptyTable: 'Brak sesji' },
     layout: { topStart: null, topEnd: null, bottomStart: null, bottomEnd: null },
     // CSV export — not placed in the table layout; fired by the "Pobierz CSV"
     // button in the accordion header (handler below). The default export
