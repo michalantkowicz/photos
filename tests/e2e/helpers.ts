@@ -2,6 +2,7 @@ import { Page, expect } from '@playwright/test';
 import mysql from 'mysql2/promise';
 import * as fs from 'fs';
 import * as path from 'path';
+import { execSync } from 'child_process';
 
 export const FIXTURE_PHOTO = path.join(__dirname, '..', 'fixtures', 'upload-photo.jpg');
 
@@ -53,8 +54,16 @@ export async function resetMutableState() {
   const dataRoot = path.join(__dirname, '..', '..', 'data');
   for (const row of nonFixture) {
     const dir = path.join(dataRoot, row.id);
-    if (fs.existsSync(dir)) {
+    if (!fs.existsSync(dir)) continue;
+    try {
       fs.rmSync(dir, { recursive: true, force: true });
+    } catch (err) {
+      // In CI the upload dirs are created by the app container (www-data),
+      // so the runner user can't unlink files inside them. Fall back to a
+      // privileged remove — GitHub runners allow passwordless sudo. Locally
+      // (no CI env) this rethrows so a real permission bug stays visible.
+      if (!process.env.CI) throw err;
+      execSync('sudo rm -rf ' + JSON.stringify(dir));
     }
   }
 }
