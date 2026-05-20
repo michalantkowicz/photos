@@ -29,6 +29,13 @@ jobs:
           cache: npm
           cache-dependency-path: tests/package-lock.json
 
+      # The PHP container runs as www-data. On a Linux runner the bind-mounted
+      # data/ dir is owned by the runner user, so www-data can't write photo
+      # uploads into it unless it's world-writable. (Not needed on macOS
+      # Docker Desktop, which is why local runs pass.)
+      - name: Make data/ writable by the app container
+        run: chmod -R 777 data
+
       - name: Start the Docker stack (PHP app + MySQL)
         run: docker compose up -d --build --wait
 
