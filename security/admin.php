@@ -138,7 +138,7 @@ require __DIR__.'/../_layout_head.php';
                     Sesje zdjęciowe
                     <span class="badge bg-success ms-2" id="session-count-badge"><?= $session_count ?></span>
                 </button>
-                <button id="csv-export-btn" type="button" class="btn btn-sm btn-light border position-absolute top-50 end-0 translate-middle-y me-5 z-2">
+                <button id="csv-export-btn" type="button" class="btn btn-sm btn-light border position-absolute top-50 end-0 translate-middle-y me-5" style="z-index:5;">
                     Pobierz CSV
                 </button>
             </h2>
